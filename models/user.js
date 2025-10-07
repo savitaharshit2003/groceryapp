@@ -1,11 +1,11 @@
-import { types } from "@babel/core";
+import { Types } from "mongoose";
 import mongoose from "mongoose";
 
 const userSchema= new mongoose.Schema({
     user:{type:String},
     role:{
         type:String,
-        enum:["Customer","Admin","DeliverPartner"],
+        enum:["Customer","Admin","DeliveryPartner"],
         required:true
     },
     isActivated:{type:Boolean,default:false}
@@ -13,6 +13,7 @@ const userSchema= new mongoose.Schema({
 
 const customerSchema=new mongoose.Schema({
     ...userSchema.obj,
+    email: { type: String, unique: true, required: true },
     phone:{type:Number,unique:true,required:true},
     role:{type:String,enum:['Customer'],default:'Customer'},
     liveLocation:{
@@ -22,19 +23,19 @@ const customerSchema=new mongoose.Schema({
     address:{type:String}
 })
 
-const delliveryPartnerSchema=new mongoose.Schema({
+const deliveryPartnerSchema=new mongoose.Schema({
     ...userSchema.obj,
     email:{type:String,unique:true,required:true},
     password:{type:String,unique:true,required:true},
     phone:{type:Number,unique:true,required:true},
-    role:{type:String,enum:['DeliverPartner'],default:'DeliverPartner'},
+    role:{type:String,enum:['DeliveryPartner'],default:'DeliveryPartner'},
     liveLocation:{
         latitude:{type:Number},
         longitude:{type:Number},
     },
     address:{type:String},
     branch:{
-        type:mongoose.Schema.Types.ObjectIdbjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:'Branch',
     },
 })
@@ -47,5 +48,5 @@ const adminSchema=new mongoose.Schema({
 })
 
 export const Customer=mongoose.model('Customer',customerSchema)
-export const DeliverPartner=mongoose.model('DeliverPartner',delliveryPartnerSchema)
+export const DeliveryPartner=mongoose.model('DeliveryPartner',deliveryPartnerSchema)
 export const Admin=mongoose.model('Admin',adminSchema)

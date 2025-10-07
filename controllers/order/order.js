@@ -1,5 +1,5 @@
-import Order from '../../models/index.js'
-import Branch from '../../models/index.js'
+import {Order} from '../../models/index.js'
+import {Branch} from '../../models/index.js'
 import {Customer,DeliveryPartner} from '../../models/index.js'
 
 
@@ -70,4 +70,68 @@ export const confirmOrder=async(req,rep)=>{
     } catch (error) {
         return rep.status(500).send({message:'Failed to confirm order',error})
     }
+}
+
+export const updatedOrderStatus = async(req,rep)=>{
+    try {
+        const {orderId}=req.params;
+        const {status, deliveryPersonLocation}= req.body;
+        const {userId}= req.user;
+        const  deliveryPerson=await DeliveryPartner.findById(userId);
+        if(!deliveryPerson){
+          return rep.status(404).send({message:'Delivery person not found'})
+        }
+        const order= await Order.findById(userId);
+        if(!order) return rep.status(404).send({message:'Order not found'})
+        if(['cancelled','delivered'].includes(order.status)){
+            return rep.status(400).send({message:'order can not be updated'})
+        }
+        if(order.DeliveryPartner.toString()!==userId){
+            return rep.status(400).send({message:'Unauthorized'});
+        }
+        order.status=status;
+        order.deliveryPersonLocation=deliveryPersonLocation;
+        await order.save();
+        req.server.io.to(orderId).emit('LiveTrackingUpdates',order);
+        return rep.send(order)
+    } catch (error) {
+        return rep.status(500).send({message:'Failed to update order status',error})
+    }
+
+}
+
+export const getOrders= async(req,rep)=>{
+    try {
+        const{status,customerId,deliveryPartnerId,branchId}=req.query;
+        let query={};
+        if(status){
+            query.status=status;
+        }
+        if(customerId){
+            query.customer=customerId;
+        }
+        if(deliveryPartnerId){
+            query.deliveryPartner=deliveryPartnerId;
+            query.branch=branchId
+        }
+        const orders=await Order.find(query).populate(
+            'Customer branch items.item deliveryPartener'
+        ) ;
+        return rep.send(orders)
+    } catch (error) {
+        return rep.status(500).send({message:'Failed to retrieve Order',error})
+    }
+}
+
+export const getOrderById= async(req,rep)=>{
+  try {
+     const{orderId}= req.params;
+      const order=await Order.findById(orderId).populate(
+            'Customer branch items.item deliveryPartener'
+        ) ;
+         if(!order) {return rep.status(404).send({message:'Order not found'})}
+         return rep.send(order)
+  } catch (error) {
+    return rep.status(500).send({message:'Failed to retrieve Order',error})
+  }
 }
